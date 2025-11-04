@@ -27,32 +27,6 @@ Para que el coche siga la línea, se implementa un controlador de bucle cerrado.
 La velocidad angular (`w`) se calcula como: `w = (Kp * error) + (Kd * derivada_del_error)`.
 La velocidad lineal (`v`) se mantiene constante para simplificar el control.
 
-### Ajuste de Ganancias (Tuning)
-
-Las constantes $K_p$ y $K_d$ son cruciales. Se ajustaron usando el método de **Prueba y Error (Trial and Error)**.
-
-1.  Se empezó con $K_d = 0$ y se aumentó $K_p$ gradualmente hasta que el coche empezó a seguir la línea, aunque con oscilaciones.
-2.  Luego, se aumentó $K_d$ para reducir las oscilaciones y estabilizar la respuesta.
-
-Las ganancias finales utilizadas en este código son:
-
-```python
-# Ganancias del controlador
-Kp = 0.0045
-Kd = 0.001
-Ki = 0.0  # No se usa en un controlador PD
-## 2. Arquitectura del Software
-
-[cite_start]El código está implementado en **Python** utilizando la arquitectura **HAL (Hardware Abstraction Layer)** proporcionada por Robotics Academy[cite: 25, 26, 27].
-
-* [cite_start]Se importan las bibliotecas `HAL` y `WebGUI`[cite: 27, 29].
-* [cite_start]El bucle principal se regula a una frecuencia constante usando `Frequency.tick(ideal_rate)`[cite: 13].
-* [cite_start]La imagen de la cámara se obtiene con `HAL.getImage()`[cite: 31].
-* [cite_start]Las velocidades lineal y angular se envían al simulador con `HAL.setV(velocity)` y `HAL.setW(velocity)`[cite: 32, 34].
-* [cite_start]La máscara de color procesada se visualiza en la interfaz de depuración usando `WebGUI.showImage(image)`[cite: 35].
-
-*(Si usaste ROS 2, deberías reemplazar esta sección por la siguiente):*
-
 ## 3. Instrucciones de Ejecución
 
 ### Prerrequisitos
@@ -82,7 +56,6 @@ Ki = 0.0  # No se usa en un controlador PD
     ```bash
     python follow_line_solution.py
     ```
-    *(Asegúrate de que el nombre del script coincida con el de tu archivo)*
 
 ## 4. Ejemplos y Rendimiento
 
