@@ -25,22 +25,34 @@ El seguimiento de la línea se realiza mediante un controlador PID (Proporcional
 * **Integral (I):** Compensa errores acumulados en el tiempo. Si el coche tiende a desviarse sistemáticamente, este término elimina el offset o sesgo residual.
 * **Derivativo (D):** Actúa sobre la tasa de cambio del error, anticipando movimientos bruscos y suavizando la respuesta del sistema.
 
-La ecuación general del control es:
-La velocidad angular (`w`) se calcula como: `w = (Kp * error) + (Kd * derivada_del_error)`.
-La velocidad lineal (`v`) se mantiene constante para simplificar el control.
-
 #### Variantes y Ajuste
 Durante el desarrollo se probaron distintas configuraciones:
-* **Controlador P:** * La forma más básica. Corrige el error directamente en proporción a su magnitud. Puede ser inestable o lento si Kp no se ajusta correctamente.
-* **Controlador PD:** * Añade la derivada del error para amortiguar las oscilaciones y anticipar curvas. Es el enfoque principal utilizado en esta solución.
-* **Controlador PID completo:** * Incluye el término integral para eliminar errores persistentes. Resulta útil en circuitos con trayectorias largas o curvas suaves.
+* **Controlador P (ControlProporcional):** * La forma más básica. Corrige el error directamente en proporción a su magnitud. Puede ser inestable o lento si Kp no se ajusta correctamente.
+     La velocidad angular (`control`) se calcula como: `control = (Kp * erro)`.
+* **Controlador PD (ControlDerivativo):** * Añade la derivada del error para amortiguar las oscilaciones y anticipar curvas. Es el enfoque principal utilizado en esta solución.
+    La velocidad angular (`control`) se calcula como: `control = (Kp * erro) + (kd * derivative_error)`, donde el `derivative_error` es la diferencia entre el error actual y el anterior, calculado como: `derivative_error = error - prev_error`.
+* **Controlador PID completo (ContorlDerivativoIntegral):** * Incluye el término integral para eliminar errores persistentes. Resulta útil en circuitos con trayectorias largas o curvas suaves.
+  La velocidad angular (`control`) se calcula como: `control = (Kp * erro) + (kd * derivative_error) + (ki * integral_error)`, donde el `integral_error` es el error acumulado, calculado como: `integral_error += error`.
+  
 El ajuste de las ganancias (`Kp`, `Ki`, `Kd`) se realizó experimentalmente hasta obtener una respuesta estable y fluida.
 
 | Parámetro | Valor |
 | :-- | --: |
 | **Kp** | 0.01 |
-| **Ki** | 0.00005 |
+| **Ki** | 0.0000005 |
 | **Kd** | 0.0005 |
+
+La velocidad lineal (`v`) se ajusta dinámicamente según la magnitud del error (`err`):
+```python
+if err > 80 or err < -80:
+  velocity = 3
+elif err > 20 or err < -20:
+  velocity = 7
+elif err > 7 or err < -7:
+  velocity = 10
+else:
+  velocity = 6
+```
 
 
 ## 3. Instrucciones de Ejecución
