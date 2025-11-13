@@ -31,9 +31,13 @@ while True:
         derivative_error = err - prev_error
         control = Kp * err + Kd * derivative_error
         if err > 80 or err < -80:
-            velocity = 3
-        elif err > 5 or err < -5:
-            velocity = 8
+          velocity = 3
+        elif err > 20 or err < -20:
+          velocity = 7
+        elif err > 7 or err < -7:
+          velocity = 10
+        else:
+          velocity = 6
         # Metros por segundo
         HAL.setV(velocity)
         # Gira en ese algulo radianes * segundo
