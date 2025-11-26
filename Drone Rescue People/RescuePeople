@@ -1,0 +1,58 @@
+import cv2
+import numpy as np
+import HAL
+import WebGUI
+import Frequency
+import math
+
+height = 4
+speed = 10.0
+
+# Parámetros de la elipse para la búsqueda
+x_min, x_max = 30, 40
+y_min, y_max = -30, 40
+x_ini, y_ini = 35, -35
+num_points = 50
+
+# Parámetros para controlar el dron
+vx = 0.0
+vy = 0.0
+vz = 1.0
+az = 0.0
+
+
+def get_velocity(x_current, y_current, x_next, y_next, speed):
+    dx = x_next - x_current
+    dy = y_next - y_current
+    distance = np.sqrt(dx**2 + dy**2)
+
+    if distance > 0:
+        vx = (dx / distance) * speed
+        vy = (dy / distance) * speed
+    else:
+        vx, vy = 0, 0
+
+    return vx, vy
+
+# Despegue y preparación del dron
+HAL.takeoff(height)
+
+# Inicialización de imágenes de cámaras
+cv2_frontal_image = HAL.get_frontal_image()
+WebGUI.showImage(cv2_frontal_image)
+cv2_ventral_image = HAL.get_ventral_image()
+WebGUI.showLeftImage(cv2_ventral_image)
+
+# Obtención de la posición inicial del dron
+current_x, current_y, current_z = HAL.get_position()
+
+vx, vy = get_velocity(current_x, current_y, x_ini, y_ini, speed)
+while abs(current_x - x_ini) > 1.0 or abs(current_y - y_ini) > 1.0:
+    current_x, current_y, current_z = HAL.get_position()
+
+    HAL.set_cmd_vel(vx, vy, vz, az)
+
+    cv2_frontal_image = HAL.get_frontal_image()
+    WebGUI.showImage(cv2_frontal_image)
+    cv2_ventral_image = HAL.get_ventral_image()
+    WebGUI.showLeftImage(cv2_ventral_image)
