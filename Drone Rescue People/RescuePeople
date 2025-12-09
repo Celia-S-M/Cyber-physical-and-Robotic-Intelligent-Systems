@@ -4,55 +4,187 @@ import HAL
 import WebGUI
 import Frequency
 import math
+import time  
 
 height = 4
-speed = 10.0
+speed = 10.0  
 
-# Parámetros de la elipse para la búsqueda
 x_min, x_max = 30, 40
 y_min, y_max = -30, 40
-x_ini, y_ini = 35, -35
-num_points = 50
+x_ini, y_ini = 35, -35  
+num_points = 50  
 
-# Parámetros para controlar el dron
 vx = 0.0
 vy = 0.0
-vz = 1.0
-az = 0.0
+vz = 1.0  
+az = 0.0  
 
+detected_faces = []
 
+# Obtener la velocidad 
 def get_velocity(x_current, y_current, x_next, y_next, speed):
     dx = x_next - x_current
     dy = y_next - y_current
     distance = np.sqrt(dx**2 + dy**2)
-
+    
     if distance > 0:
-        vx = (dx / distance) * speed
-        vy = (dy / distance) * speed
+        velocity_factor = min(1.0, distance / 7.0)
+        vx = (dx / distance) * speed * velocity_factor
+        vy = (dy / distance) * speed * velocity_factor
     else:
         vx, vy = 0, 0
 
     return vx, vy
 
-# Despegue y preparación del dron
+
+# Deteción de personas
+def detect_survivor(ventralImage, faceCascade):
+    survivorDetected = False
+
+    angles = [0, 45, -45, 90, -90, 135, -135, 180]
+
+    h, w = ventralImage.shape[:2]
+
+    for angle in angles:
+        rotationCenter = (w / 2, h / 2)
+        rotationMatrix = cv2.getRotationMatrix2D(rotationCenter, angle, 1.0)
+        rotatedVentral = cv2.warpAffine(ventralImage, rotationMatrix, (w, h))
+        rotatedGray = cv2.cvtColor(rotatedVentral, cv2.COLOR_BGR2GRAY)
+
+        WebGUI.showImage(rotatedGray)
+
+        faces = faceCascade.detectMultiScale(
+            rotatedGray,
+            scaleFactor=1.02,
+            minNeighbors=2
+        )
+
+        if len(faces) > 0:
+            survivorDetected = True
+            break  
+
+    return survivorDetected, ventralImage
+
+# Deteción de superviviente nuevo 
+def new_detection(x, y, detected_faces, threshold=4):
+    for face in detected_faces:
+        if math.dist((x, y), (face["x"], face["y"])) < threshold:
+            return False
+    return True
+
+# Obtener distancia al objetivo
+def calculate_distance(x1, y1, x2, y2):
+    return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+
 HAL.takeoff(height)
 
-# Inicialización de imágenes de cámaras
 cv2_frontal_image = HAL.get_frontal_image()
 WebGUI.showImage(cv2_frontal_image)
+
 cv2_ventral_image = HAL.get_ventral_image()
 WebGUI.showLeftImage(cv2_ventral_image)
 
-# Obtención de la posición inicial del dron
+
+# Movimiento hacia (x_ini, y_ini)
 current_x, current_y, current_z = HAL.get_position()
-
 vx, vy = get_velocity(current_x, current_y, x_ini, y_ini, speed)
-while abs(current_x - x_ini) > 1.0 or abs(current_y - y_ini) > 1.0:
-    current_x, current_y, current_z = HAL.get_position()
 
+while abs(current_x - x_ini) > 0.5 or abs(current_y - y_ini) > 0.5:
+    current_x, current_y, current_z = HAL.get_position()  
+    
+    vx, vy = get_velocity(current_x, current_y, x_ini, y_ini, speed)
+    
     HAL.set_cmd_vel(vx, vy, vz, az)
+    
+    WebGUI.showImage(HAL.get_frontal_image())
+    WebGUI.showLeftImage(HAL.get_ventral_image())
 
-    cv2_frontal_image = HAL.get_frontal_image()
-    WebGUI.showImage(cv2_frontal_image)
-    cv2_ventral_image = HAL.get_ventral_image()
-    WebGUI.showLeftImage(cv2_ventral_image)
+    time.sleep(0.1)
+
+HAL.set_cmd_vel(0, 0, 0, 0)
+
+
+import cv2.data
+faceCascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+
+
+# Movimiento espiral
+center_x, center_y = x_ini, y_ini
+
+alfa = 0
+a = 1
+b = 2
+incremento_alfa = (2 * math.pi) / 16
+r = 0
+
+HAL.takeoff(height)
+print("Iniciando búsqueda en espiral")
+
+found = False
+
+while r < 10:
+    r = a + b * (alfa / (2 * math.pi))
+
+    x_target = center_x + r * math.cos(alfa)
+    y_target = center_y + r * math.sin(alfa)
+
+    x, y, z = HAL.get_position()
+    distancia = math.dist((x, y), (x_target, y_target))
+
+    while distancia > 0.5:
+        x, y, z = HAL.get_position()
+        distancia = math.dist((x, y), (x_target, y_target))
+
+        HAL.set_cmd_pos(x_target, y_target, height, HAL.get_yaw())
+        WebGUI.showImage(HAL.get_frontal_image())
+        WebGUI.showLeftImage(HAL.get_ventral_image())
+
+        time.sleep(0.05)
+
+    ventral = HAL.get_ventral_image()
+    found, _ = detect_survivor(ventral, faceCascade)
+
+    if found:
+        if new_detection(x, y, detected_faces):
+            detected_faces.append({
+                "x": x,
+                "y": y
+            })
+
+    WebGUI.showLeftImage(ventral)
+
+    alfa += incremento_alfa
+
+print(f"Fin de detección, se detectaron {len(detected_faces)} supervivientes.")
+print("Fin de detección. Supervivientes detectados:")
+for i, face in enumerate(detected_faces, start=1):
+    print(f"{i}. x={face['x']}, y={face['y']}")
+HAL.set_cmd_vel(0, 0, 0, 0)
+
+# Regrear a la base
+target_x, target_y = 0, 0
+current_x, current_y, current_z = HAL.get_position()
+vx, vy = get_velocity(current_x, current_y, target_x, target_y, speed)
+
+while True:
+    current_x, current_y, current_z = HAL.get_position()
+    
+    distancia = calculate_distance(current_x, current_y, target_x, target_y)
+    
+    if distancia > 5.0:
+        vx, vy = get_velocity(current_x, current_y, target_x, target_y, speed)
+        HAL.set_cmd_vel(vx, vy, vz, az)
+    else:
+        HAL.set_cmd_pos(target_x, target_y, height, HAL.get_yaw())
+    
+    WebGUI.showImage(HAL.get_frontal_image())
+    WebGUI.showLeftImage(HAL.get_ventral_image())
+    
+    time.sleep(0.1)
+    
+    if distancia < 0.05:
+        break
+
+HAL.land()
+HAL.set_cmd_vel(0, 0, 0, 0)
+print("Dron de vuelta a la base.")
