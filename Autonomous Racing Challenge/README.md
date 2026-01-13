@@ -62,9 +62,9 @@ A continuación, se muestra el funcionamiento del algoritmo. La imagen superior 
 
 | Vista de la Cámara | Imagen Procesada (Máscara) |
 | :---: | :---: |
-| ![Vista de la cámara en recta](imagesamera_straight.png) | ![Máscara procesada en recta](imagesask_straight.png) |
+| ![Vista de la cámara en recta](images/camera_straight.png) | ![Máscara procesada en recta](images/mask_straight.png) |
 | *Coche en una recta* | *Detección de la línea en la recta* |
-| ![Vista de la cámara en curva](imagesamera_curve.png) | ![Máscara procesada en curva](imagesask_curve.png) |
+| ![Vista de la cámara en curva](images/camera_curve.png) | ![Máscara procesada en curva](images/mask_curve.png) |
 | *Coche tomando una curva* | *Detección de la línea en la curva* |
 
 
